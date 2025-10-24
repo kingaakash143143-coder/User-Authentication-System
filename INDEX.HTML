@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Auth Demo — Signup / Login</title>
+  <style>
+    :root{
+      --bg:#0f1724; --card:#0b1220; --accent:#7c3aed; --muted:#94a3b8; --glass: rgba(255,255,255,0.04);
+      --success:#16a34a; --danger:#ef4444;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    html,body{height:100%}
+    body{
+      margin:0; background:linear-gradient(180deg, #071023 0%, #081426 100%); color:#e6eef8;
+      display:flex; align-items:center; justify-content:center; padding:32px;
+    }
+    .wrap{
+      width:100%; max-width:980px; display:grid; grid-template-columns: 1fr 420px; gap:28px;
+    }
+
+    .left{
+      background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border-radius:14px; padding:28px; box-shadow: 0 8px 30px rgba(2,6,23,0.7);
+      border:1px solid rgba(255,255,255,0.03);
+    }
+    .brand{display:flex; align-items:center; gap:12px; margin-bottom:18px}
+    .logo{
+      width:54px; height:54px; border-radius:10px; display:grid; place-items:center;
+      background:linear-gradient(135deg,var(--accent), #2dd4bf);
+      box-shadow: 0 6px 20px rgba(124,58,237,0.18);
+      font-weight:700; color:white;
+    }
+    h1{margin:0 0 8px 0; font-size:20px}
+    p.lead{margin:0; color:var(--muted)}
+
+    .card{
+      margin-top:18px; padding:18px; border-radius:10px; background:var(--card);
+      border:1px solid var(--glass);
+    }
+
+    form{display:grid; gap:10px}
+    label{font-size:13px; color:var(--muted)}
+    input[type="text"], input[type="password"]{
+      width:100%; padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.04);
+      background:transparent; color:inherit; outline:none;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.01);
+    }
+    .row{display:flex; gap:10px}
+    .btn{
+      display:inline-block; padding:10px 14px; border-radius:10px; cursor:pointer; border:0;
+      background:linear-gradient(90deg,var(--accent),#06b6d4); color:white; font-weight:600;
+      box-shadow: 0 8px 24px rgba(124,58,237,0.18);
+    }
+    .btn.ghost{background:transparent; border:1px solid rgba(255,255,255,0.06); box-shadow:none}
+    .muted{color:var(--muted); font-size:13px}
+    .small{font-size:13px}
+    .message{padding:10px;border-radius:8px;font-weight:600}
+    .success{background:rgba(22,163,74,0.12); color:var(--success); border:1px solid rgba(22,163,74,0.09)}
+    .error{background:rgba(239,68,68,0.08); color:var(--danger); border:1px solid rgba(239,68,68,0.09)}
+
+    /* right column: auth forms */
+    .panel{
+      background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      padding:22px; border-radius:14px; border:1px solid rgba(255,255,255,0.03);
+      display:flex; flex-direction:column; gap:12px;
+    }
+    .tabs{display:flex; gap:8px}
+    .tab {flex:1; padding:10px; text-align:center; border-radius:8px; cursor:pointer; background:transparent; color:var(--muted); border:1px solid transparent}
+    .tab.active{background:linear-gradient(90deg,var(--accent), #06b6d4); color:white; font-weight:700; box-shadow:0 8px 20px rgba(12,12,30,0.6)}
+    .protected{padding:18px; border-radius:10px; background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent); border:1px solid rgba(255,255,255,0.03)}
+
+    footer{margin-top:12px; color:var(--muted); font-size:13px}
+    @media (max-width:980px){
+      .wrap{grid-template-columns: 1fr; padding:12px}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap" role="main">
+    <div class="left" aria-labelledby="app-title">
+      <div class="brand">
+        <div class="logo">AD</div>
+        <div>
+          <div style="font-weight:700">Auth Demo</div>
+          <div class="muted" id="app-title">Client-side authentication demo</div>
+        </div>
+      </div>
+
+      <h1>Protected area</h1>
+      <p class="lead">Sign up and log in using the panel to the right. After login you'll see the protected content below.</p>
+
+      <div class="card" id="protectedCard">
+        <div id="protectedContent" class="protected">
+          <div class="muted">You are not logged in.</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:12px;">
+        <h2 style="margin:0 0 8px 0">Why this is a demo</h2>
+        <p class="muted small" style="margin:0">
+          This file demonstrates client-side hashing and session simulation. In production, never rely only on client-side auth — always use server-side storage, proper password hashing (Argon2/bcrypt/scrypt), HTTPS, CSRF protections, secure cookies or tokens.
+        </p>
+      </div>
+
+      <footer>
+        <div class="muted">Built with Web Crypto API • Demo only • Data stored in browser localStorage</div>
+      </footer>
+    </div>
+
+    <div class="panel" aria-label="Authentication panel">
+      <div class="tabs" role="tablist">
+        <div id="tab-login" class="tab active" role="tab" aria-selected="true">Login</div>
+        <div id="tab-signup" class="tab" role="tab" aria-selected="false">Sign up</div>
+      </div>
+
+      <!-- Login -->
+      <div id="loginView" class="card" aria-hidden="false">
+        <form id="loginForm" autocomplete="on">
+          <div>
+            <label for="loginUser">Username</label>
+            <input id="loginUser" name="loginUser" type="text" required />
+          </div>
+          <div>
+            <label for="loginPass">Password</label>
+            <input id="loginPass" name="loginPass" type="password" required />
+          </div>
+          <div class="row" style="align-items:center; justify-content:space-between">
+            <label class="muted small"><input id="remember" type="checkbox" /> Remember me</label>
+            <div style="display:flex; gap:8px">
+              <button class="btn" type="submit">Log in</button>
+              <button type="button" id="fillTest" class="btn ghost">Fill test</button>
+            </div>
+          </div>
+        </form>
+
+        <div id="loginMessage" style="margin-top:10px"></div>
+      </div>
+
+      <!-- Signup -->
+      <div id="signupView" class="card" style="display:none" aria-hidden="true">
+        <form id="signupForm" autocomplete="on">
+          <div>
+            <label for="signupUser">Choose username</label>
+            <input id="signupUser" name="signupUser" type="text" required />
+          </div>
+          <div>
+            <label for="signupPass">Choose password <span class="muted">(min 8 chars)</span></label>
+            <input id="signupPass" name="signupPass" type="password" required minlength="8" />
+          </div>
+          <div class="row">
+            <button class="btn" type="submit">Create account</button>
+            <button type="button" id="genPass" class="btn ghost">Generate strong password</button>
+          </div>
+        </form>
+
+        <div id="signupMessage" style="margin-top:10px"></div>
+      </div>
+
+      <!-- Session controls -->
+      <div id="sessionControls" class="card" style="display:none;">
+        <div style="display:flex; align-items:center; justify-content:space-between">
+          <div>
+            <div style="font-weight:700" id="whoAmI">You</div>
+            <div class="muted small" id="sessionInfo">Logged in</div>
+          </div>
+          <div style="display:flex; gap:8px; align-items:center">
+            <button id="logoutBtn" class="btn ghost">Log out</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+<script>
+/*
+  Client-side auth demo
+  - Uses PBKDF2 via Web Crypto API to derive a key (hash) from the password.
+  - Stores {salt, iterations, hash} in localStorage under 'users' as an object.
+  - Simulates sessions via 'currentUser' in localStorage.
+  NOTE: This is a demo only. Do not use in production.
+*/
+
+const ITERATIONS = 120000; // moderate for browser demo (server should be higher and use secure alg)
+const HASH_NAME = 'SHA-256';
+const KEY_LEN = 32; // bytes
+
+function getUsers(){
+  try {
+    return JSON.parse(localStorage.getItem('users')||'{}');
+  } catch(e){ return {}; }
+}
+function saveUsers(u){ localStorage.setItem('users', JSON.stringify(u)); }
+
+function abToBase64(raw){
+  return btoa(String.fromCharCode(...new Uint8Array(raw)));
+}
+function base64ToAb(str){
+  const bin = atob(str);
+  const arr = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
+  return arr.buffer;
+}
+
+async function hashPassword(password, saltBase64, iterations=ITERATIONS){
+  // Derive a key using PBKDF2 -> HMAC(SHA-256)
+  const enc = new TextEncoder();
+  const pwKey = await crypto.subtle.importKey('raw', enc.encode(password), {name:'PBKDF2'}, false, ['deriveBits']);
+  const saltBuffer = base64ToAb(saltBase64);
+  const derived = await crypto.subtle.deriveBits(
+    {name:'PBKDF2', salt: saltBuffer, iterations, hash: HASH_NAME},
+    pwKey,
+    KEY_LEN * 8
+  );
+  return abToBase64(derived);
+}
+
+function genSalt(length=16){
+  const b = new Uint8Array(length);
+  crypto.getRandomValues(b);
+  return abToBase64(b.buffer);
+}
+
+/* UI helpers */
+const loginForm = document.getElementById('loginForm');
+const signupForm = document.getElementById('signupForm');
+const loginMessage = document.getElementById('loginMessage');
+const signupMessage = document.getElementById('signupMessage');
+const protectedContent = document.getElementById('protectedContent');
+const sessionControls = document.getElementById('sessionControls');
+const whoAmI = document.getElementById('whoAmI');
+const sessionInfo = document.getElementById('sessionInfo');
+
+function showMessage(el, text, type='success'){
+  el.innerHTML = `<div class="message ${type==='success' ? 'success' : 'error'}">${text}</div>`;
+}
+
+function clearMessage(el){ el.innerHTML=''; }
+
+/* Tabs */
+const tabLogin = document.getElementById('tab-login');
+const tabSignup = document.getElementById('tab-signup');
+const loginView = document.getElementById('loginView');
+const signupView = document.getElementById('signupView');
+
+tabLogin.addEventListener('click', ()=>{ tabLogin.classList.add('active'); tabSignup.classList.remove('active'); loginView.style.display='block'; signupView.style.display='none'; });
+tabSignup.addEventListener('click', ()=>{ tabSignup.classList.add('active'); tabLogin.classList.remove('active'); loginView.style.display='none'; signupView.style.display='block'; });
+
+/* Signup flow */
+signupForm.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  clearMessage(signupMessage);
+  const user = document.getElementById('signupUser').value.trim();
+  const pass = document.getElementById('signupPass').value;
+  if(!user || pass.length < 8){ showMessage(signupMessage,'Choose a username and password (min 8 chars).','error'); return; }
+
+  const users = getUsers();
+  if(users[user]){ showMessage(signupMessage,'Username already exists. Choose another.','error'); return; }
+
+  const salt = genSalt();
+  const hashed = await hashPassword(pass, salt, ITERATIONS);
+  users[user] = { salt, hash: hashed, iterations: ITERATIONS, createdAt: new Date().toISOString() };
+  saveUsers(users);
+  showMessage(signupMessage, 'Account created. You can now log in.');
+  signupForm.reset();
+});
+
+/* Login flow */
+loginForm.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  clearMessage(loginMessage);
+  const user = document.getElementById('loginUser').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  const remember = document.getElementById('remember').checked;
+
+  const users = getUsers();
+  if(!users[user]){ showMessage(loginMessage,'No such user. Sign up first.','error'); return; }
+
+  const record = users[user];
+  const candidate = await hashPassword(pass, record.salt, record.iterations);
+  if(candidate === record.hash){
+    // login success
+    const session = { user, createdAt: new Date().toISOString() };
+    if(remember){
+      localStorage.setItem('currentUser', JSON.stringify(session));
+    } else {
+      // set in sessionStorage for this tab only
+      sessionStorage.setItem('currentUser', JSON.stringify(session));
+      localStorage.removeItem('currentUser');
+    }
+    showMessage(loginMessage, 'Login successful. Welcome!');
+    loginForm.reset();
+    updateUI();
+  } else {
+    showMessage(loginMessage,'Incorrect password.','error');
+  }
+});
+
+/* Logout */
+document.getElementById('logoutBtn').addEventListener('click', ()=>{
+  sessionStorage.removeItem('currentUser');
+  localStorage.removeItem('currentUser');
+  updateUI();
+});
+
+/* Fill test - convenient helper to create test account */
+document.getElementById('fillTest').addEventListener('click', ()=>{
+  document.getElementById('loginUser').value = 'alice';
+  document.getElementById('loginPass').value = 'Password123!';
+});
+
+/* Generate password helper */
+document.getElementById('genPass').addEventListener('click', ()=>{
+  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+~';
+  let pw=''; for(let i=0;i<14;i++) pw += chars[Math.floor(Math.random()*chars.length)];
+  document.getElementById('signupPass').value = pw;
+  showMessage(signupMessage, 'Generated a strong password. Save it somewhere safe.');
+});
+
+/* Helpers to get current session (localStorage preferred for remember me) */
+function getCurrentSession(){
+  const sLocal = localStorage.getItem('currentUser');
+  if(sLocal) return JSON.parse(sLocal);
+  const sSess = sessionStorage.getItem('currentUser');
+  if(sSess) return JSON.parse(sSess);
+  return null;
+}
+
+/* Update protected area / UI depending on session */
+function updateUI(){
+  const session = getCurrentSession();
+  if(session){
+    // show protected content & session controls
+    sessionControls.style.display = 'block';
+    sessionInfo.textContent = `Logged in at ${new Date(session.createdAt).toLocaleString()}`;
+    whoAmI.textContent = session.user;
+    protectedContent.innerHTML = `
+      <div style="display:flex; gap:12px; align-items:center; justify-content:space-between">
+        <div>
+          <div style="font-weight:700">${escapeHtml(session.user)}</div>
+          <div class="muted small">Welcome to the protected area.</div>
+        </div>
+        <div style="text-align:right">
+          <div class="muted small">Member since: --</div>
+        </div>
+      </div>
+      <div style="margin-top:12px;" class="muted small">This content is visible only when you're "logged in" (client-side demo).</div>
+    `;
+  } else {
+    sessionControls.style.display = 'none';
+    protectedContent.innerHTML = `<div class="muted">You are not logged in.</div>`;
+  }
+}
+
+/* Escape simple HTML to avoid injection in demo UI */
+function escapeHtml(s){
+  return s.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
+}
+
+/* On load: create a sample user for convenience if not exists */
+(async function initDemo(){
+  const users = getUsers();
+  if(!users['alice']){
+    const salt = genSalt();
+    const pass = 'Password123!'; // demo password
+    const hash = await hashPassword(pass, salt, ITERATIONS);
+    users['alice'] = { salt, hash, iterations: ITERATIONS, createdAt: new Date().toISOString() };
+    saveUsers(users);
+  }
+  updateUI();
+})();
+</script>
+</body>
+</html>
